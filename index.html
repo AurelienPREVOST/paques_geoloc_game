@@ -43,17 +43,21 @@
         }
         #inventaire {
             width: 100vw;
-            height: 100px;
+            height: 50px;
             display: flex;
             margin: 0 auto;
             justify-content: flex-start;
             padding: 20px;
-            overflow-x: scroll;
-            background: rgba(255, 255, 255, 0.185);
+            overflow-x: auto;
+            background: rgba(255, 255, 255, 0.8);
             z-index: 4;
             position: absolute;
             top: 0;
             left: 0;
+        }
+        #inventaire::-webkit-scrollbar {
+            width: 0;
+            height: 0;
         }
         #inventaire img {
             height: 100%;
@@ -63,10 +67,10 @@
         }
         #next-destination-button {
             position: absolute;
-            bottom: 50px;
+            bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            padding: 40px 30px;
+            padding: 10px 20px;
             font-size: 16px;
             background: #4CAF50;
             color: white;
@@ -98,9 +102,9 @@
 
             // Liste des coordonnées GPS (latitude, longitude) et des images associées
             const destinations = [
-                { lat: 46.657363, lon: 0.364953, label: "PARKING ABC", image: "oeufs_1.png" },  // Parking Aerospace ABC Armatis
-                { lat: 46.640801, lon: 0.227117, label: "HOME", image: "oeufs_2.png" }, // self
-                { lat: 46.63952540161938, lon: 0.22408903165008098, label: "CROISEMENT", image: "oeufs_3.png" }  // croisement
+                { lat: 46.657363, lon: 0.364953, label: "PARKING ABC", image: "oeufs_1.png", visited: false },  // Parking Aerospace ABC Armatis
+                { lat: 46.640801, lon: 0.227117, label: "HOME", image: "oeufs_2.png", visited: false }, // self
+                { lat: 46.63952540161938, lon: 0.22408903165008098, label: "CROISEMENT", image: "oeufs_3.png", visited: false }  // croisement
             ];
 
             const proximityThreshold = 0.1; // seuil de proximité en kilomètres (~100m)
@@ -131,13 +135,15 @@
 
                 for (let i = 0; i < destinations.length; i++) {
                     const destination = destinations[i];
-                    const distance = getDistance(userLat, userLon, destination.lat, destination.lon);
-                    if (distance < proximityThreshold) {
-                        destinationImage.src = destination.image;
-                        destinationImage.style.display = 'block';
-                        nextButton.style.display = 'block';
-                        currentDestinationIndex = i;
-                        break;
+                    if (!destination.visited) { // Check if the destination is not visited
+                        const distance = getDistance(userLat, userLon, destination.lat, destination.lon);
+                        if (distance < proximityThreshold) {
+                            destinationImage.src = destination.image;
+                            destinationImage.style.display = 'block';
+                            nextButton.style.display = 'block';
+                            currentDestinationIndex = i;
+                            break;
+                        }
                     }
                 }
             }
@@ -189,6 +195,9 @@
                     const img = document.createElement("img");
                     img.src = dest.image;
                     inventory.appendChild(img);
+
+                    // Marquer la destination comme visitée
+                    destinations[currentDestinationIndex].visited = true;
 
                     destinationImage.style.display = 'none';
                     nextButton.style.display = 'none';
