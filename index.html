@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suivi de Position avec Leaflet et Caméra</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        #camera {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+        }
+        #map {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 30vw;
+            height: 30vh;
+            z-index: 2;
+        }
+        .destination-image {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 50%;
+            max-height: 50%;
+            aspect-ratio: 1/1;
+            opacity: 0.8;
+            z-index: 3;
+            display: none;
+        }
+        #inventaire {
+            width: 100vw;
+            height: 100px;
+            display: flex;
+            margin: 0 auto;
+            justify-content: flex-start;
+            padding: 20px;
+            overflow-x: scroll;
+            background: rgba(255, 255, 255, 0.185);
+            z-index: 4;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        #inventaire img {
+            height: 100%;
+            width: auto;
+            margin-left: 20px;
+            margin-right: 20px;
+        }
+        #next-destination-button {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 40px 30px;
+            font-size: 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 4;
+            display: none;
+        }
+    </style>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</head>
+<body>
+    <div id="inventaire"></div>
+    <video id="camera" autoplay></video>
+    <div id="map"></div>
+    <img id="destination-image" class="destination-image" src="" alt="Destination Image">
+    <button id="next-destination-button">Me rendre à la prochaine position</button>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Initialisation de la carte Leaflet
+            const map = L.map('map').setView([48.8566, 2.3522], 2); // Vue centrée sur Paris
+
+            // Ajouter une couche de tuiles OpenStreetMap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            // Liste des coordonnées GPS (latitude, longitude) et des images associées
+            const destinations = [
+                { lat: 46.657363, lon: 0.364953, label: "PARKING ABC", image: "oeufs_1.png" },  // Parking Aerospace ABC Armatis
+                { lat: 46.640801, lon: 0.227117, label: "HOME", image: "oeufs_2.png" }, // self
+                { lat: 46.63952540161938, lon: 0.22408903165008098, label: "CROISEMENT", image: "oeufs_3.png" }  // croisement
+            ];
+
+            const proximityThreshold = 0.1; // seuil de proximité en kilomètres (~100m)
+
+            // Ajouter des marqueurs pour chaque destination
+            destinations.forEach(dest => {
+                L.marker([dest.lat, dest.lon]).addTo(map).bindPopup(dest.label);
+            });
+
+            let userMarker;
+            const destinationImage = document.getElementById("destination-image");
+            const nextButton = document.getElementById("next-destination-button");
+            const inventory = document.getElementById("inventaire");
+            let currentDestinationIndex = -1;
+
+            // Fonction pour vérifier la proximité de la destination
+            function checkProximity(position) {
+                const userLat = position.coords.latitude;
+                const userLon = position.coords.longitude;
+
+                if (userMarker) {
+                    userMarker.setLatLng([userLat, userLon]);
+                } else {
+                    userMarker = L.marker([userLat, userLon]).addTo(map).bindPopup("Votre position");
+                }
+                
+                map.setView([userLat, userLon], 13);
+
+                for (let i = 0; i < destinations.length; i++) {
+                    const destination = destinations[i];
+                    const distance = getDistance(userLat, userLon, destination.lat, destination.lon);
+                    if (distance < proximityThreshold) {
+                        destinationImage.src = destination.image;
+                        destinationImage.style.display = 'block';
+                        nextButton.style.display = 'block';
+                        currentDestinationIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            // Fonction pour calculer la distance entre deux points GPS
+            function getDistance(lat1, lon1, lat2, lon2) {
+                const radlat1 = Math.PI * lat1 / 180;
+                const radlat2 = Math.PI * lat2 / 180;
+                const theta = lon1 - lon2;
+                const radtheta = Math.PI * theta / 180;
+                let dist = Math.sin(radlat1) * Math.sin(radlat2) + Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta);
+                if (dist > 1) {
+                    dist = 1;
+                }
+                dist = Math.acos(dist);
+                dist = dist * 180 / Math.PI;
+                dist = dist * 60 * 1.1515 * 1.609344; // Convert miles to kilometers
+                return dist;
+            }
+
+            // Vérifier la géolocalisation
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(checkProximity, (error) => {
+                    console.error("Erreur de géolocalisation: ", error);
+                });
+            } else {
+                alert("La géolocalisation n'est pas supportée par ce navigateur.");
+            }
+
+            // Activer la caméra
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(function(stream) {
+                        const video = document.getElementById('camera');
+                        video.srcObject = stream;
+                        video.play();
+                    })
+                    .catch(function(error) {
+                        console.error("Erreur d'accès à la caméra: ", error);
+                    });
+            } else {
+                alert("L'accès à la caméra n'est pas supporté par ce navigateur.");
+            }
+
+            // Gestion du bouton "Me rendre à la prochaine position"
+            nextButton.addEventListener("click", () => {
+                if (currentDestinationIndex !== -1) {
+                    const dest = destinations[currentDestinationIndex];
+                    const img = document.createElement("img");
+                    img.src = dest.image;
+                    inventory.appendChild(img);
+
+                    destinationImage.style.display = 'none';
+                    nextButton.style.display = 'none';
+                    currentDestinationIndex = -1;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
