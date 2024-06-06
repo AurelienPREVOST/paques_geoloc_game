@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
         body, html {
+            font-size: 16px;
+            font-family: sans-serif;
             margin: 0;
             padding: 0;
             height: 100%;
@@ -43,13 +45,13 @@
         }
         #inventaire {
             width: 100vw;
-            height: 50px;
+            height: 5vh;
             display: flex;
             margin: 0 auto;
             justify-content: flex-start;
             padding: 20px;
             overflow-x: auto;
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(0, 0, 0, 0.25);
             z-index: 4;
             position: absolute;
             top: 0;
@@ -64,6 +66,18 @@
             width: auto;
             margin-left: 20px;
             margin-right: 20px;
+        }
+        p {
+            position:absolute;
+            z-index: 1000;
+            top:5vh;
+            left:50%;
+            transform: translateX(-50%);
+            padding:10px;
+            border-radius: 10px;
+            background:rgba(190, 80, 190, 0.60);
+            color:white;
+            font-weight: bolder;
         }
         #next-destination-button {
             position: absolute;
@@ -84,12 +98,13 @@
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 <body>
-    <div id="inventaire"></div>
+    <p>inventaire:</p>
+    <div id="inventaire">
+    </div>
     <video id="camera" autoplay></video>
     <div id="map"></div>
     <img id="destination-image" class="destination-image" src="" alt="Destination Image">
     <button id="next-destination-button">Me rendre à la prochaine position</button>
-
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             // Initialisation de la carte Leaflet
